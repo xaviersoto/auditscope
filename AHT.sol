@@ -56,4 +56,3 @@ contract AHT is ERC20Capped, ERC20Burnable, ERC20Permit, AccessControl, Pausable
         super._update(from, to, amount);
     }
 }
-
