@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity 0.8.22;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
@@ -38,6 +38,8 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
     error NoEscrow();
     /// @dev Nothing to refund (zero escrow or zero reserver).
     error NothingToRefund();
+    /// @dev Expiration timestamp must be zero (no expiry) or in the future.
+    error ExpirationInPast();
 
     // ──────────────────── State ────────────────────
 
@@ -126,6 +128,7 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
         if (id == 0) revert IdZero();
         if (listings[id].id != 0) revert ListingExists();
         if (builder == address(0)) revert BuilderZero();
+        if (reserveUntil != 0 && reserveUntil <= uint40(block.timestamp)) revert ExpirationInPast();
         listings[id] = Listing({
             id: id,
             builder: builder,
@@ -150,6 +153,7 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
         if (listing.id == 0) revert NoListing();
         if (msg.sender != listing.builder && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotBuilderOrAdmin();
         if (listing.status != Status.LISTED) revert WrongStatus();
+        if (reserveUntil != 0 && reserveUntil <= uint40(block.timestamp)) revert ExpirationInPast();
         listing.priceAHT = priceAHT;
         listing.reserveUntil = reserveUntil;
         emit Updated(id, priceAHT, reserveUntil);
@@ -227,6 +231,7 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
 
         escrowed[id] = 0;
         listing.status = Status.CANCELED;
+        listing.reserver = address(0);
 
         if (!IERC20(address(AHT_TOKEN)).transfer(to, amt)) revert TransferFailed();
 
