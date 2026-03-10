@@ -100,6 +100,10 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
     /// @param refunded AHT returned to reserver.
     event Canceled(uint256 indexed id, uint256 indexed refunded);
 
+    /// @notice Emitted when a canceled listing is re-opened for reservation.
+    /// @param id Listing identifier.
+    event Relisted(uint256 indexed id);
+
     // ──────────────────── Constructor ────────────────────
 
     /// @notice Deploy the escrow, binding it to an AHT token address.
@@ -157,6 +161,17 @@ contract ReservationEscrow is ReentrancyGuard, AccessControl {
         listing.priceAHT = priceAHT;
         listing.reserveUntil = reserveUntil;
         emit Updated(id, priceAHT, reserveUntil);
+    }
+
+    /// @notice Re-open a canceled listing so it can be reserved again. Builder or admin only.
+    /// @param id Listing identifier (must be in CANCELED status).
+    function relist(uint256 id) external {
+        Listing storage listing = listings[id];
+        if (listing.id == 0) revert NoListing();
+        if (msg.sender != listing.builder && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotBuilderOrAdmin();
+        if (listing.status != Status.CANCELED) revert WrongStatus();
+        listing.status = Status.LISTED;
+        emit Relisted(id);
     }
 
     // ──────────────────── User Flow ────────────────────

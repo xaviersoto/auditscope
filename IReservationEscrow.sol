@@ -72,6 +72,10 @@ interface IReservationEscrow {
     /// @param id Listing identifier.
     function cancel(uint256 id) external;
 
+    /// @notice Re-open a canceled listing so it can be reserved again.
+    /// @param id Listing identifier (must be in CANCELED status).
+    function relist(uint256 id) external;
+
     /// @notice Read a listing's current state.
     /// @param id Listing identifier.
     /// @return _id Listing id.
